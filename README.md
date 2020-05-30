@@ -2,7 +2,7 @@
 Twitter's library in Deno
 
 ```js
-import twitter from "../twitter.ts";
+import twitter from "https://deno.land/x/twitter/twitter.ts";
 import { config } from "https://deno.land/x/dotenv/mod.ts";
 
 config({
