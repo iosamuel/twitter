@@ -24,7 +24,7 @@ export default class Parser extends EventEmitter {
     super();
   }
 
-  receive(buffer: ArrayBuffer) {
+  receive(buffer: Uint8Array) {
     const decoder = new TextDecoder();
     this.buffer += decoder.decode(buffer);
     let index, json;
@@ -42,19 +42,16 @@ export default class Parser extends EventEmitter {
             this.emit(json.event, json);
             // Now emit catch-all event
             this.emit("event", json);
-          }
-          // Delete message
+          } // Delete message
           else if (json.delete !== undefined) {
             this.emit("delete", json);
-          }
-          // Friends message (beginning of stream)
+          } // Friends message (beginning of stream)
           else if (
             json.friends !== undefined ||
             json.friends_str !== undefined
           ) {
             this.emit("friends", json);
-          }
-          // Any other message
+          } // Any other message
           else {
             this.emit("data", json);
           }

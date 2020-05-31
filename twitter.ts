@@ -3,7 +3,7 @@
 /**
  * Module dependencies
  */
-// import Streamparser from "./parser.ts";
+import StreamParser from "./parser.ts";
 import merge from "https://deno.land/x/lodash/merge.js";
 
 // Package version
@@ -37,11 +37,11 @@ class Twitter {
           headers: {
             Accept: "*/*",
             Connection: "close",
-            "User-Agent": "node-twitter/" + VERSION
-          }
-        }
+            "User-Agent": "node-twitter/" + VERSION,
+          },
+        },
       },
-      options
+      options,
     );
 
     let authentication_options: {
@@ -57,8 +57,8 @@ class Twitter {
         consumer_key: this.options.consumer_key,
         consumer_secret: this.options.consumer_secret,
         token: this.options.access_token_key,
-        token_secret: this.options.access_token_secret
-      }
+        token_secret: this.options.access_token_secret,
+      },
     };
 
     // Check to see if we are going to use User Authentication or Application Authetication
@@ -66,14 +66,14 @@ class Twitter {
       const headers = new Headers();
       headers.set("Authorization", "Bearer " + this.options.bearer_token);
       authentication_options = {
-        headers: headers
+        headers: headers,
       };
     }
 
     // Configure default request options
     this.requestDefaults = merge(
       this.options.request_options,
-      authentication_options
+      authentication_options,
     );
   }
 
@@ -83,7 +83,7 @@ class Twitter {
       stream: this.options.stream_base,
       user_stream: this.options.user_stream_base,
       site_stream: this.options.site_stream_base,
-      media: this.options.media_base
+      media: this.options.media_base,
     };
     let endpoint = bases.hasOwnProperty(base) ? bases[base] : bases.rest;
     // if full url is specified we use that
@@ -121,8 +121,7 @@ class Twitter {
     if (typeof params === "function") {
       cb = params;
       params = {};
-    }
-    // Return promise if no callback is passed and promises available
+    } // Return promise if no callback is passed and promises available
     else if (callback === undefined) {
       promise = true;
     } else {
@@ -137,7 +136,7 @@ class Twitter {
 
     // Build the options to pass to our custom request object
     const options = merge(this.requestDefaults, {
-      method: method.toLowerCase() // Request method - get || post
+      method: method.toLowerCase(), // Request method - get || post
     });
 
     let url = this.__buildEndpoint(path, base); // Generate url
@@ -154,8 +153,8 @@ class Twitter {
     if (promise) {
       return new Promise(function (resolve, reject) {
         fetch(request)
-          .then(res => res.json())
-          .then(data => {
+          .then((res) => res.json())
+          .then((data) => {
             // response object errors
             // This should return an error object not an array of errors
             if (data.errors !== undefined) {
@@ -173,7 +172,7 @@ class Twitter {
 
     // Callback version
     fetch(request)
-      .then(async response => {
+      .then(async (response) => {
         const data = await response.json();
 
         // response object errors
@@ -205,8 +204,60 @@ class Twitter {
 
   /**
    * STREAM
-   * TODO: Implement this in DENO
    */
+  stream(method: string, params: any, callback?: Function) {
+    if (typeof params === "function") {
+      callback = params;
+      params = {};
+    }
+
+    let base: keyof Bases = "stream";
+
+    if (method === "user" || method === "site") {
+      base = (method + "_" + base) as keyof Bases;
+    }
+
+    let url = this.__buildEndpoint(method, base);
+    const qs = "?" + new URLSearchParams(params).toString();
+    url += qs;
+
+    const request = new Request(url);
+    const stream = new StreamParser();
+
+    fetch(url, request).then((response) => {
+      const reader = response.body?.getReader();
+
+      if (response.status !== 200) {
+        stream.emit("error", new Error("Status Code: " + response.status));
+      }
+      stream.emit("response", response);
+
+      return new ReadableStream({
+        start(controller) {
+          return pump();
+          function pump(): any {
+            return reader?.read().then(({ done, value }) => {
+              if (done) {
+                stream.emit("end", response);
+                controller.close();
+              }
+              if (value) {
+                stream.receive(value);
+                controller.enqueue(value);
+              }
+              return pump();
+            });
+          }
+        },
+      });
+    });
+
+    if (typeof callback === "function") {
+      callback(stream);
+    } else {
+      return stream;
+    }
+  }
 }
 
 export default Twitter;
