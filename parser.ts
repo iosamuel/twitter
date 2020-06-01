@@ -12,7 +12,7 @@
 //   p.receive(data)
 //   ...
 
-import EventEmitter from "./events.ts";
+import EventEmitter from "https://deno.land/std/node/events.ts";
 
 export default class Parser extends EventEmitter {
   buffer = "";

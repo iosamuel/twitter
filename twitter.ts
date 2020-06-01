@@ -4,7 +4,7 @@
  * Module dependencies
  */
 import StreamParser from "./parser.ts";
-import merge from "https://deno.land/x/lodash/merge.js";
+import { deepAssign as merge } from "https://deno.land/std/_util/deep_assign.ts";
 
 // Package version
 const VERSION = 0.1;
@@ -37,11 +37,11 @@ class Twitter {
           headers: {
             Accept: "*/*",
             Connection: "close",
-            "User-Agent": "node-twitter/" + VERSION
-          }
-        }
+            "User-Agent": "node-twitter/" + VERSION,
+          },
+        },
       },
-      options
+      options,
     );
 
     let authentication_options: {
@@ -57,8 +57,8 @@ class Twitter {
         consumer_key: this.options.consumer_key,
         consumer_secret: this.options.consumer_secret,
         token: this.options.access_token_key,
-        token_secret: this.options.access_token_secret
-      }
+        token_secret: this.options.access_token_secret,
+      },
     };
 
     // Check to see if we are going to use User Authentication or Application Authetication
@@ -66,14 +66,14 @@ class Twitter {
       const headers = new Headers();
       headers.set("Authorization", "Bearer " + this.options.bearer_token);
       authentication_options = {
-        headers: headers
+        headers: headers,
       };
     }
 
     // Configure default request options
     this.requestDefaults = merge(
+      authentication_options,
       this.options.request_options,
-      authentication_options
     );
   }
 
@@ -83,7 +83,7 @@ class Twitter {
       stream: this.options.stream_base,
       user_stream: this.options.user_stream_base,
       site_stream: this.options.site_stream_base,
-      media: this.options.media_base
+      media: this.options.media_base,
     };
     let endpoint = bases.hasOwnProperty(base) ? bases[base] : bases.rest;
     // if full url is specified we use that
@@ -136,7 +136,7 @@ class Twitter {
 
     // Build the options to pass to our custom request object
     const options = merge(this.requestDefaults, {
-      method: method.toLowerCase() // Request method - get || post
+      method: method.toLowerCase(), // Request method - get || post
     });
 
     let url = this.__buildEndpoint(path, base); // Generate url
@@ -153,8 +153,8 @@ class Twitter {
     if (promise) {
       return new Promise(function (resolve, reject) {
         fetch(request)
-          .then(res => res.json())
-          .then(data => {
+          .then((res) => res.json())
+          .then((data) => {
             // response object errors
             // This should return an error object not an array of errors
             if (data.errors !== undefined) {
@@ -172,7 +172,7 @@ class Twitter {
 
     // Callback version
     fetch(request)
-      .then(async response => {
+      .then(async (response) => {
         const data = await response.json();
 
         // response object errors
@@ -224,7 +224,7 @@ class Twitter {
     const request = new Request(url);
     const stream = new StreamParser();
 
-    fetch(url, request).then(response => {
+    fetch(url, request).then((response) => {
       const reader = response.body?.getReader();
 
       if (response.status !== 200) {
@@ -248,7 +248,7 @@ class Twitter {
               return pump();
             });
           }
-        }
+        },
       });
     });
 
